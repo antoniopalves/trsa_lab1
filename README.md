@@ -41,31 +41,37 @@ Features include:
 Install with:
 ```bash
 sudo apt install ros-humble-cv-bridge python3-opencv python3-numpy
+```
 
 ## Build
 From the ROS 2 workspace root:
 
+```bash
 cd ~/ros2_ws
 colcon build --symlink-install
 source install/setup.bash
+```
 
-Execution
+## Execution
 Mode 1 — Edge Detection
 
 Start the camera driver (publishes video frames):
 
+```bash
 ros2 run trsa_lab1 camera_driver
-
+```
 
 Run the image processing node (grayscale + Canny edges):
 
+```bash
 ros2 run trsa_lab1 image_convert
-
+```
 
 View both raw and processed video streams:
 
+```bash
 ros2 run trsa_lab1 image_reader
-
+```
 
 This will show two OpenCV windows: one with the original video and another with edge detection results.
 
@@ -73,36 +79,51 @@ Mode 2 — Object Detection (Green Phone Case)
 
 Start the secondary camera driver for the new video:
 
+```bash
 ros2 run trsa_lab1 camera_driver2
-
+```
 
 Launch the object detection node:
 
+```bash
 ros2 run trsa_lab1 object_detection
-
+```
 
 Display the annotated output:
 
+```bash
 ros2 run trsa_lab1 image_reader --ros-args -r /camera/image_raw:=/camera2/object_detected
-
+```
 
 This will display the video feed where the green phone case is automatically detected and highlighted with a bounding box.
 
 Project Layout
 trsa_lab1/
- ├── calibration/
- ├── video/
- ├── trsa_lab1/
- │    ├── camera_driver.py
- │    ├── camera_driver2.py
- │    ├── image_convert.py
- │    ├── image_reader.py
- │    ├── object_detection.py
- │    └── ...
- ├── package.xml
- └── setup.py
 
-Notes
+ ├── calibration/
+ 
+ ├── video/
+ 
+ ├── trsa_lab1/
+ 
+ │    ├── camera_driver.py
+ 
+ │    ├── camera_driver2.py
+ 
+ │    ├── image_convert.py
+ 
+ │    ├── image_reader.py
+ 
+ │    ├── object_detection.py
+ 
+ │    └── ...
+ 
+ ├── package.xml
+ 
+ └── setup.py
+ 
+
+## Notes
 
 Tested on ROS 2 Humble (Ubuntu 22.04 / WSL2) with OpenCV ≥ 4.5
 
