@@ -9,37 +9,34 @@ class ImageReader(Node):
         super().__init__('image_reader')
         self.bridge = CvBridge()
 
-        # subscrição à imagem raw
-        self.subscription_raw = self.create_subscription(
-            Image,
-            '/camera/image_raw',    
-            self.raw_callback,
-            10)
-
-        # subscrição à imagem processada
-        self.subscription_proc = self.create_subscription(
-            Image,
-            '/camera/image_processed',
-            self.proc_callback,
-            10)
+        # Subscriptions
+        self.sub_raw = self.create_subscription(Image, '/camera/image_raw', self.cb_raw, 10)
+        self.sub_proc = self.create_subscription(Image, '/camera/image_processed', self.cb_proc, 10)
+        self.sub_detect = self.create_subscription(Image, '/camera2/object_detected', self.cb_detect, 10)
 
         self.frame_raw = None
         self.frame_proc = None
+        self.frame_detect = None
 
-    def raw_callback(self, msg):
-        self.frame_raw = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
-        self.show_images()
+    def cb_raw(self, msg):
+        self.frame_raw = self.bridge.imgmsg_to_cv2(msg, 'bgr8')
+        self.display()
 
-    def proc_callback(self, msg):
-        # como a imagem processada foi publicada em mono8, forçamos isso
-        self.frame_proc = self.bridge.imgmsg_to_cv2(msg, desired_encoding='mono8')
-        self.show_images()
+    def cb_proc(self, msg):
+        self.frame_proc = self.bridge.imgmsg_to_cv2(msg, 'mono8')
+        self.display()
 
-    def show_images(self):
+    def cb_detect(self, msg):
+        self.frame_detect = self.bridge.imgmsg_to_cv2(msg, 'bgr8')
+        self.display()
+
+    def display(self):
         if self.frame_raw is not None:
-            cv2.imshow("Image Raw", self.frame_raw)
+            cv2.imshow('Raw Image', self.frame_raw)
         if self.frame_proc is not None:
-            cv2.imshow("Image Processed", self.frame_proc)
+            cv2.imshow('Processed (Edges)', self.frame_proc)
+        if self.frame_detect is not None:
+            cv2.imshow('Object Detection', self.frame_detect)
         cv2.waitKey(1)
 
 def main(args=None):
@@ -50,3 +47,5 @@ def main(args=None):
     cv2.destroyAllWindows()
     rclpy.shutdown()
 
+if __name__ == '__main__':
+    main()
