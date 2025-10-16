@@ -2,18 +2,17 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image, CameraInfo
 from cv_bridge import CvBridge
-import cv2
 import yaml
 import os
 import ament_index_python
 from image_geometry import PinholeCameraModel
+import cv2
 
 class CameraRectifier(Node):
     def __init__(self):
         super().__init__('camera_rectifier')
 
         self.bridge = CvBridge()
-        self.image_pub_raw = self.create_publisher(Image, '/camera/image_raw', 10)
         self.image_pub_rect = self.create_publisher(Image, '/camera/image_rect', 10)
 
         # carregar calibração
@@ -24,16 +23,13 @@ class CameraRectifier(Node):
         )
         self.load_camera_calibration(calibration_path)
 
-        # abrir vídeo de teste
-        video_path = os.path.join(
-            ament_index_python.get_package_share_directory('trsa_lab1'),
-            'video',
-            'test.mov'   # ajusta se o nome for outro
+        # subscrever ao tópico image_raw
+        self.image_sub = self.create_subscription(
+            Image,
+            '/camera/image_raw',
+            self.image_callback,
+            10
         )
-        self.cap = cv2.VideoCapture(video_path)
-
-        # timer ~30 FPS
-        self.timer = self.create_timer(0.03, self.timer_callback)
 
     def load_camera_calibration(self, calibration_path):
         with open(calibration_path, 'r') as file:
@@ -50,19 +46,9 @@ class CameraRectifier(Node):
         self.camera_model = PinholeCameraModel()
         self.camera_model.fromCameraInfo(self.camera_info)
 
-    def timer_callback(self):
-        ret, frame = self.cap.read()
-        if not ret:
-            self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)  # reinicia o vídeo
-            return
+    def image_callback(self, msg):
+        frame = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
 
-        # publicar imagem original
-        msg_raw = self.bridge.cv2_to_imgmsg(frame, encoding='bgr8')
-        msg_raw.header.stamp = self.get_clock().now().to_msg()
-        msg_raw.header.frame_id = "camera"
-        self.image_pub_raw.publish(msg_raw)
-
-        # rectificação
         rectified = frame.copy()
         self.camera_model.rectifyImage(frame, rectified)
 
@@ -75,7 +61,6 @@ def main(args=None):
     rclpy.init(args=args)
     node = CameraRectifier()
     rclpy.spin(node)
-    node.cap.release()
     node.destroy_node()
     rclpy.shutdown()
 

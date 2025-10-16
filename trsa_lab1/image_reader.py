@@ -8,44 +8,50 @@ class ImageReader(Node):
     def __init__(self):
         super().__init__('image_reader')
         self.bridge = CvBridge()
+        self.subscribers = {}
+        self.create_timer(2.0, self.check_topics)
 
-        # Subscriptions
-        self.sub_raw = self.create_subscription(Image, '/camera/image_raw', self.cb_raw, 10)
-        self.sub_proc = self.create_subscription(Image, '/camera/image_processed', self.cb_proc, 10)
-        self.sub_detect = self.create_subscription(Image, '/camera2/object_detected', self.cb_detect, 10)
+    def check_topics(self):
+        topics = [name for name, _ in self.get_topic_names_and_types()]
+        wanted = [
+            '/camera/image_raw',
+            '/camera/image_processed',
+            '/camera/image_rect',
+            '/camera2/image_raw',
+            '/camera2/object_detected'
+        ]
 
-        self.frame_raw = None
-        self.frame_proc = None
-        self.frame_detect = None
+        for t in wanted:
+            if t in topics and t not in self.subscribers:
+                self.get_logger().info(f'Subscribing to {t}')
+                if 'processed' in t:
+                    sub = self.create_subscription(Image, t, self.make_cb('mono8', t), 10)
+                else:
+                    sub = self.create_subscription(Image, t, self.make_cb('bgr8', t), 10)
+                self.subscribers[t] = sub
 
-    def cb_raw(self, msg):
-        self.frame_raw = self.bridge.imgmsg_to_cv2(msg, 'bgr8')
-        self.display()
-
-    def cb_proc(self, msg):
-        self.frame_proc = self.bridge.imgmsg_to_cv2(msg, 'mono8')
-        self.display()
-
-    def cb_detect(self, msg):
-        self.frame_detect = self.bridge.imgmsg_to_cv2(msg, 'bgr8')
-        self.display()
-
-    def display(self):
-        if self.frame_raw is not None:
-            cv2.imshow('Raw Image', self.frame_raw)
-        if self.frame_proc is not None:
-            cv2.imshow('Processed (Edges)', self.frame_proc)
-        if self.frame_detect is not None:
-            cv2.imshow('Object Detection', self.frame_detect)
-        cv2.waitKey(1)
+    def make_cb(self, encoding, name):
+        def callback(msg):
+            try:
+                frame = self.bridge.imgmsg_to_cv2(msg, desired_encoding=encoding)
+                window = f'{name}'
+                cv2.imshow(window, frame)
+                cv2.waitKey(1)
+            except Exception as e:
+                self.get_logger().error(f'Error processing {name}: {e}')
+        return callback
 
 def main(args=None):
     rclpy.init(args=args)
     node = ImageReader()
-    rclpy.spin(node)
-    node.destroy_node()
-    cv2.destroyAllWindows()
-    rclpy.shutdown()
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.destroy_node()
+        cv2.destroyAllWindows()
+        rclpy.shutdown()
 
 if __name__ == '__main__':
     main()
