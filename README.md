@@ -92,7 +92,7 @@ ros2 run trsa_lab1 object_detection
 Display the annotated output:
 
 ```bash
-ros2 run trsa_lab1 image_reader --ros-args -r /camera/image_raw:=/camera2/object_detected
+ros2 run trsa_lab1 image_reader
 ```
 
 This will display the video feed where the green phone case is automatically detected and highlighted with a bounding box.
